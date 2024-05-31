@@ -5,8 +5,11 @@ import random
 import math
 
 WIDTH, HEIGHT = 640, 640
-TITLE = "Island Generation"
+TITLE = "Insula"
 FPS = 60
+
+NOISE_SCALE = 100.0
+ENVIRONMENT_SIZE = 128
 
 FILL = (0, 0, 0)
 BLACK = (15, 15, 15)
@@ -21,23 +24,25 @@ class Game:
         self.Keys = pygame.key.get_pressed()
         pygame.display.set_caption(TITLE)
         self.Running = True
-        self.Seed = random.randint(0, 1000)
+        self.Seed = self.GenerateSeed()
         self.IslandMap = self.GenerateIsland()
+
+    def GenerateSeed(self):
+        return random.randint(0, 1000)
 
     def GenerateIsland(self):
         IslandMap = []
-        Scale = 100
 
-        for y in range(128):
+        for y in range(ENVIRONMENT_SIZE):
             Row = []
-            for x in range(128):
+            for x in range(ENVIRONMENT_SIZE):
                 DistanceToCenter = math.sqrt((x - 64) ** 2 + (y - 64) ** 2)
-                ScaledDistance = DistanceToCenter / (128 / math.sqrt(2))
-                Value = noise.snoise2(x / Scale, y / Scale, octaves=8, persistence=0.6, lacunarity=2.0, repeatx=1024, repeaty=1024, base=self.Seed)
+                ScaledDistance = DistanceToCenter / (ENVIRONMENT_SIZE / math.sqrt(2))
+                Value = noise.snoise2(x / NOISE_SCALE, y / NOISE_SCALE, octaves=8, persistence=0.6, lacunarity=2.0, repeatx=1024, repeaty=1024, base=self.Seed)
                 Row.append(Value > ScaledDistance)
             IslandMap.append(Row)
 
-        if sum(sum(row) for row in IslandMap) < 1000:
+        if sum(sum(Row) for Row in IslandMap) < 1000:
             self.Seed += 1
             return self.GenerateIsland()
 
@@ -52,8 +57,7 @@ class Game:
     def HandleEvents(self):
         for Event in pygame.event.get():
             if Event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+                self.Running = False
 
     def Update(self):
         self.HandleInput()
@@ -65,16 +69,19 @@ class Game:
         self.Screen.fill(FILL)
 
         BlockSize = 5
-        OffsetX = (WIDTH - 128 * BlockSize) // 2
-        OffsetY = (HEIGHT - 128 * BlockSize) // 2
+        OffsetX = (WIDTH - ENVIRONMENT_SIZE * BlockSize) // 2
+        OffsetY = (HEIGHT - ENVIRONMENT_SIZE * BlockSize) // 2
 
-        for y in range(128):
-            for x in range(128):
+        for y in range(ENVIRONMENT_SIZE):
+            for x in range(ENVIRONMENT_SIZE):
                 Color = WHITE if self.IslandMap[y][x] else BLACK
-                pygame.draw.rect(self.Screen, Color, (OffsetX + x * BlockSize, OffsetY + y * BlockSize, BlockSize, BlockSize), 0)
-                pygame.draw.rect(self.Screen, GRAY, (OffsetX + x * BlockSize, OffsetY + y * BlockSize, BlockSize, BlockSize), 1)
+                pygame.draw.rect(self.Screen, Color,
+                                 (OffsetX + x * BlockSize, OffsetY + y * BlockSize, BlockSize, BlockSize), 0)
+                pygame.draw.rect(self.Screen, GRAY,
+                                 (OffsetX + x * BlockSize, OffsetY + y * BlockSize, BlockSize, BlockSize), 1)
 
         pygame.display.flip()
+
 
 def Main() -> None:
     m_Game = Game()
@@ -83,6 +90,10 @@ def Main() -> None:
         m_Game.HandleEvents()
         m_Game.Update()
         m_Game.Render()
+
+    pygame.quit()
+    sys.exit()
+
 
 if __name__ == "__main__":
     Main()
